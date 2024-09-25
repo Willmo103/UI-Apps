@@ -11,22 +11,24 @@ from watchdog.events import FileSystemEventHandler
 # Global variable to control the observer thread
 running = False
 
+
 class Config:
     def __init__(self, config_file):
         self.load_config(config_file)
 
     def load_config(self, config_file):
-        with open(config_file, 'r') as f:
+        with open(config_file, "r") as f:
             cfg = yaml.safe_load(f)
-            self.watch_paths = cfg.get('watch_paths', [])
-            self.backup_dir = cfg.get('backup_dir', 'backups')
-            self.remote_host = cfg.get('remote_host', '')
-            self.remote_user = cfg.get('remote_user', '')
-            self.remote_path = cfg.get('remote_path', '')
-            self.git_repo_path = cfg.get('git_repo_path', '')
-            self.git_remote = cfg.get('git_remote', 'origin')
-            self.git_branch = cfg.get('git_branch', 'main')
-            self.zip_password = cfg.get('zip_password', '')
+            self.watch_paths = cfg.get("watch_paths", [])
+            self.backup_dir = cfg.get("backup_dir", "backups")
+            self.remote_host = cfg.get("remote_host", "")
+            self.remote_user = cfg.get("remote_user", "")
+            self.remote_path = cfg.get("remote_path", "")
+            self.git_repo_path = cfg.get("git_repo_path", "")
+            self.git_remote = cfg.get("git_remote", "origin")
+            self.git_branch = cfg.get("git_branch", "main")
+            self.zip_password = cfg.get("zip_password", "")
+
 
 class BackupHandler(FileSystemEventHandler):
     def __init__(self, config):
@@ -45,30 +47,39 @@ class BackupHandler(FileSystemEventHandler):
 
                 # Zip and encrypt the files using 7zip
                 zip_command = [
-                    '7z', 'a', '-t7z', '-mhe=on', f"-p{self.config.zip_password}",
-                    zip_filepath, path
+                    "7z",
+                    "a",
+                    "-t7z",
+                    "-mhe=on",
+                    f"-p{self.config.zip_password}",
+                    zip_filepath,
+                    path,
                 ]
                 subprocess.run(zip_command)
 
                 # Transfer the zipped file using scp
                 scp_command = [
-                    'scp', zip_filepath,
-                    f"{self.config.remote_user}@{self.config.remote_host}:{self.config.remote_path}"
+                    "scp",
+                    zip_filepath,
+                    f"{self.config.remote_user}@{self.config.remote_host}:{self.config.remote_path}",
                 ]
                 subprocess.run(scp_command)
 
                 # Commit and push to Git repository
                 os.chdir(self.config.git_repo_path)
-                subprocess.run(['git', 'add', '.'])
+                subprocess.run(["git", "add", "."])
                 commit_message = f"Automatic backup {timestamp}"
-                subprocess.run(['git', 'commit', '-m', commit_message])
-                subprocess.run(['git', 'push', self.config.git_remote, self.config.git_branch])
+                subprocess.run(["git", "commit", "-m", commit_message])
+                subprocess.run(
+                    ["git", "push", self.config.git_remote, self.config.git_branch]
+                )
 
     def on_modified(self, event):
         self.process(event)
 
     def on_created(self, event):
         self.process(event)
+
 
 def start_watching(config):
     global running
@@ -85,9 +96,11 @@ def start_watching(config):
         observer.stop()
     observer.join()
 
+
 def stop_watching():
     global running
     running = False
+
 
 class BackupApp(tk.Tk):
     def __init__(self):
@@ -100,17 +113,21 @@ class BackupApp(tk.Tk):
         self.create_widgets()
 
     def create_widgets(self):
-        self.start_button = tk.Button(self, text="Start Backup", command=self.start_backup)
+        self.start_button = tk.Button(
+            self, text="Start Backup", command=self.start_backup
+        )
         self.start_button.pack(pady=10)
 
-        self.stop_button = tk.Button(self, text="Stop Backup", command=self.stop_backup, state='disabled')
+        self.stop_button = tk.Button(
+            self, text="Stop Backup", command=self.stop_backup, state="disabled"
+        )
         self.stop_button.pack(pady=10)
 
         self.load_button = tk.Button(self, text="Load Config", command=self.load_config)
         self.load_button.pack(pady=10)
 
     def load_config(self):
-        config_file = 'config.yml'  # You can use a file dialog to select the file
+        config_file = "config.yml"  # You can use a file dialog to select the file
         if os.path.exists(config_file):
             self.config = Config(config_file)
             messagebox.showinfo("Config Loaded", "Configuration loaded successfully.")
@@ -119,18 +136,23 @@ class BackupApp(tk.Tk):
 
     def start_backup(self):
         if not self.config:
-            messagebox.showwarning("No Config", "Please load the configuration file first.")
+            messagebox.showwarning(
+                "No Config", "Please load the configuration file first."
+            )
             return
-        self.thread = threading.Thread(target=start_watching, args=(self.config,), daemon=True)
+        self.thread = threading.Thread(
+            target=start_watching, args=(self.config,), daemon=True
+        )
         self.thread.start()
-        self.start_button.config(state='disabled')
-        self.stop_button.config(state='normal')
+        self.start_button.config(state="disabled")
+        self.stop_button.config(state="normal")
 
     def stop_backup(self):
         stop_watching()
-        self.start_button.config(state='normal')
-        self.stop_button.config(state='disabled')
+        self.start_button.config(state="normal")
+        self.stop_button.config(state="disabled")
         messagebox.showinfo("Backup Stopped", "Backup process has been stopped.")
+
 
 if __name__ == "__main__":
     app = BackupApp()

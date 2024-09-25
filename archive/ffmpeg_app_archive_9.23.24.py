@@ -9,7 +9,7 @@ import tkinter.font as tkFont
 import sys
 
 # Path to the FFmpeg binaries, which will be bundled inside the executable
-if getattr(sys, 'frozen', False):  # Check if running as a PyInstaller bundle
+if getattr(sys, "frozen", False):  # Check if running as a PyInstaller bundle
     FFMPEG_DIR = os.path.join(sys._MEIPASS, "bin")
 else:
     FFMPEG_DIR = "bin"
@@ -24,10 +24,9 @@ FFPROBE = os.path.join(FFMPEG_DIR, "ffprobe.exe")
 FFPLAY = os.path.join(FFMPEG_DIR, "ffplay.exe")
 
 
-
 # Load configuration
 try:
-    with open("conf.json", "r") as j:
+    with open("conf.example.json", "r") as j:
         data = json.load(j)
     OUTPUT_PATH = data["output_path"]
     dictConfig(data["logging_config"])
@@ -40,14 +39,15 @@ except (FileNotFoundError, FileExistsError) as err:
 # Set up logging
 logger = logging.getLogger(LOGGER_NAME)
 
-# Function to save updated configuration to conf.json
+
+# Function to save updated configuration to conf.example.json
 def save_config(output_path):
     try:
         # Update configuration with the new output path
         data["output_path"] = output_path
         data["mp4_dir"] = os.path.join(output_path, "mp4")
         data["gif_dir"] = os.path.join(output_path, "gif")
-        with open("conf.json", "w") as j:
+        with open("conf.example.json", "w") as j:
             json.dump(data, j, indent=4)
         logger.info(f"Configuration updated with new output path: {output_path}")
     except Exception as e:
@@ -61,19 +61,27 @@ def get_video_info():
     try:
         ffprobe_cmd = [
             FFPROBE,  # Use the dynamically resolved FFPROBE path
-            "-v", "error",
-            "-select_streams", "v:0",
-            "-show_entries", "stream=width,height,duration",
-            "-of", "csv=s=x:p=0",
+            "-v",
+            "error",
+            "-select_streams",
+            "v:0",
+            "-show_entries",
+            "stream=width,height,duration",
+            "-of",
+            "csv=s=x:p=0",
             input_file,
         ]
-        result = subprocess.run(ffprobe_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        result = subprocess.run(
+            ffprobe_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        )
         width, height, duration = result.stdout.decode("utf-8").strip().split("x")
         duration = float(duration)
         video_duration_label.config(text=f"Video Duration: {int(duration)} seconds")
         start_slider.config(to=int(duration))
         end_slider.config(to=int(duration))
-        logger.info(f"Video: {input_file}, Dimensions: {width}x{height}, Duration: {int(duration)} seconds")
+        logger.info(
+            f"Video: {input_file}, Dimensions: {width}x{height}, Duration: {int(duration)} seconds"
+        )
         rename_var.set(os.path.basename(input_file).replace(".mp4", "_processed"))
         return int(width), int(height), duration
     except Exception as e:

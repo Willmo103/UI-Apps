@@ -4,3 +4,4 @@
 build
 dist
 ffmpeg_ui/dist
+*idea
